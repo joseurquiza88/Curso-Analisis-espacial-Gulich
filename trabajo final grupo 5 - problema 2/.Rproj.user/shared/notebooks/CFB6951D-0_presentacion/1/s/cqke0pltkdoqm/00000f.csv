@@ -1,0 +1,4 @@
+"0","# Paquetes requeridos"
+"0","pacman::p_load(rio, tidyverse, moments, sf,spdep,tidyverse, tmap, leaflet, stars,"
+"0","               mapview, # remotes::install_github(""r-spatial/mapview"")"
+"0","               e1071, gridExtra, RColorBrewer, raster, cowplot, gstat)"

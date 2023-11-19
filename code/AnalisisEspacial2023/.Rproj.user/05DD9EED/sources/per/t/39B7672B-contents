@@ -1,0 +1,91 @@
+
+#################################################################
+
+# Example  of an exposure model based on mobility and activities
+# 0. Run necessary libraries for the model. If they are not installed
+# install. 
+#00_library
+
+#1. Running the functions of the .R files:
+# 01_trajectories_request.R
+# 02_function_point-to-line.R
+# 03_hours.R
+# 04_exposure.R
+#2. Locate yourself on the path where the CALPUFF grids are located
+#local path
+setwd("D:/Josefina/paper_git/paper_exposure_model/grid_example")
+
+#3. Variables
+
+# ------------01. Origin-Destination points
+#Ejemplo 01
+travel_list <- data.frame(long = c(-68.804999,	-68.822955),
+                          lat = c(-32.891357,	-32.948591))
+
+#Ejemplo 02 con mas de 1 destino
+travel_list <- data.frame(long = c(-68.86805,-68.833412, -68.846629),
+                          lat = c(-32.940088,-32.92984,-32.9210935))
+# ------------02. Key tom-tom
+### se obtiene gratis de la pagina de tom-tom https://developer.tomtom.com/how-to-get-tomtom-api-key
+# Tiene un limite diario de 2500 request
+key <- "YOdvX5qKwpk9YRl9v0JzqC5qSYNOwbDc"###
+# ------------03. Transport mode 
+# Always consider the round trip
+#Ejemplo 01
+mode = c("car","car")
+
+#Ejemplo 02 con mas de 1 destino
+mode = c("car","car", "motorcycle")
+#------------04. Path with all CALPUFF Grid
+# the grids must be by day-hour
+# local path
+concentrations_grid<- "D:/Josefina/paper_git/paper_exposure_model/grid_example"
+
+# Siempre hay que ubicarse en el path donde estan las grillas de contaminantes
+setwd(concentrations_grid)
+
+
+#------------05. Type of route selected
+# Ejemplo 01
+selection <- c("Faster route","Faster route")
+# Ejemplo 02
+selection <- c("Shorter route","Faster route","Shorter route")
+
+## ------------07. Departure time from home for the first time.
+# Usar siempre el dia 01-08-2019, pueden variar las horas
+departure_time_home <- "2019-08-01 07:50:00 -03"
+
+## ------------08. Duration of each activity.
+#Ejemplo 01
+activity_minutes<-data.frame(activity_minutes=300)
+#Ejemplo 02
+activity_minutes<-data.frame(activity_minutes=c(300,200))
+
+#------- Examples
+# Atencion demora varios minutos en procesarse todo.
+# Si son mas destinos, demora mas
+. 
+# La diferencia esta en el tipo de salida elegido, uno es un df y el otro es un leaflet map
+example_df <- total_exposure (travel_list, mode, concentrations_grid,
+                              key,selection,output_exp="df",
+                            departure_time_home, activity_minutes)
+
+
+example_plot <- total_exposure (travel_list, mode, concentrations_grid,
+                                 key,selection,output_exp="plot",
+                                 departure_time_home, activity_minutes)
+
+example_plot2 <- total_exposure (travel_list, mode, concentrations_grid,
+                                key,selection,output_exp="plot",
+                              departure_time_home, activity_minutes)
+
+# ------------ Save examples
+# Path local
+setwd("D:/Josefina/paper_git/paper_exposure_model/examples")
+# output DF
+write.csv(example_df,"./func_expossure_DF.csv")
+# output plot
+htmlwidgets::saveWidget(example_plot , "./func_expossure_PLOT_2.html")
+
+
+

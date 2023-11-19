@@ -1,0 +1,83 @@
+#mapview(suelo_finca, zcol = "MO") + mapview(suelo_finca_limites)
+# 
+# cols <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+# mapview(suelo_finca,
+#         zcol = "MO",
+#         alpha = 0,
+#         col.regions = cols)
+# 
+# # limites (bordes) del lote ####
+# datos <- st_read("lim_finca1.gpkg")
+# mapview(datos) + mapview(suelo_finca,
+#                          zcol = "MO",
+#                          alpha = 0,
+#                          col.regions = cols)
+
+
+# Definición de vecindarios ####
+## Datos MO ponderando por distancia ####
+vecindarios_MO_p <- dnearneigh(suelo_finca1$geometry, 0, 30)
+#summary(vecindarios_MO_p)
+
+p<- plot(
+  vecindarios_MO_p,
+  suelo_finca1$geometry,
+  col = "#009999",
+  pch = 20,
+  cex = 0.5
+)
+
+dist <- spdep::nbdists(vecindarios_MO_p, suelo_finca1)
+fdist <- lapply(dist, function(x)
+  (1 / (x / 100)))
+
+
+lw2 <- nb2listw(vecindarios_MO_p, glist = fdist, style = "W")
+#sum(lw2$weights[10][[1]])
+
+
+### Cálculo del índice de autocorrelación espacial de Moran
+imoran_MO <-
+  moran.mc(suelo_finca1$MO, lw2, nsim = 1000, zero.policy = T)
+
+# a 20 - p = 0.000999...  Cuanta menos distancia se considera hay menores conexciones entre vecinos y sin embargo el índice de Moran indica que hay estructura espacial (p =0.000999)
+
+
+
+
+# para ver inliers
+MP <-
+  moran.plot(
+    suelo_finca1$MO,
+    lw2,
+    col = 3,
+    quiet = T,
+    labels = F,
+    zero.policy = T,
+    xlab = "MO",
+    ylab = "MO Spatially Lagged"
+  )
+Influ <- MP$is_inf
+
+
+
+#  Cálculo del índice de Moran local (IML) ####
+ML <-
+  localmoran(suelo_finca1$MO, lw2, alternative = "less")
+IMl <-
+  printCoefmat(data.frame(ML, row.names = suelo_finca1$Casos), 
+               check.names = FALSE)
+
+#  Eliminación de inliers utilizando IML y MP  ####
+suelo_finca2 <- cbind(suelo_finca1, Influ, IMl)
+
+#st_write(misdatos_3,"Datosadepurar.gpkg")
+# elimina los que tienen indice de moran negativo y son significativos....
+suelo_finca2 <-
+  subset(suelo_finca2, suelo_finca2[["Ii"]] > 0 |
+           suelo_finca2[["Pr.z...E.Ii.."]] > 0.05)
+
+suelo_finca3 <- suelo_finca2[suelo_finca2$Influ == FALSE, ]
+
+
+

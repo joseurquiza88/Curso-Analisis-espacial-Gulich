@@ -1,0 +1,5 @@
+"0","# Mostrar las primeras 5 filas como una tabla HTML"
+"0","tabla_html <- kable(head(datos, 5), format = ""html"")"
+"0",""
+"0","# Imprimir la tabla HTML"
+"0","print(tabla_html)"

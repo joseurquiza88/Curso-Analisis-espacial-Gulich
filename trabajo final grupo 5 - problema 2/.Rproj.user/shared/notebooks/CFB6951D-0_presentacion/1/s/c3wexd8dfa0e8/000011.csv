@@ -1,0 +1,4 @@
+"0",""
+"0",""
+"0","suelo_finca1 <- suelo_finca %>% "
+"0","  filter(MO >= resumen$LI)"

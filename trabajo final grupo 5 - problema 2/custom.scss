@@ -1,0 +1,72 @@
+/*-- scss:defaults --*/
+
+/* Estilo para el título del primer slide */
+.reveal div.slides > section:first-child h1 {
+  font-size: 40pt; /* Tamaño de letra para el título del primer slide (ajusta según tus necesidades) */
+  /* Otros estilos para el título del primer slide si los necesitas */
+}
+
+$body-bg: #191919;
+$body-color: #fff;
+$fontSize: 22px;
+$link-color: #42affa;
+
+// Estilos para el cuerpo
+body {
+  font-size: $fontSize;
+}
+
+h1 {
+  font-size: $fontSize * 2; // Ejemplo: el tamaño de la letra será el doble que el tamaño de letra del cuerpo
+}
+
+p {
+  font-size: $fontSize * 1; // Ejemplo: el tamaño de la letra será el 87.5% del tamaño de letra del cuerpo
+}
+
+// Estilos para las viñetas en listas no ordenadas
+ul {
+  list-style-type: none; // Quita las viñetas predeterminadas
+  li {
+    font-size: $fontSize * 0.9; // Tamaño de letra para los elementos de la lista no ordenada
+  }
+}
+
+// Define una clase personalizada para los chunks de código R
+.code-r-chunk {
+  font-size: 10px; // Tamaño de letra para los chunks de código R (ajusta según tus necesidades)
+  font-family: monospace; // Fuente monoespaciada para mantener la alineación del código
+  // Otros estilos adicionales si los necesitas
+}
+
+/*-- scss:rules --*/
+
+.reveal .slide blockquote {
+  border-left: 3px solid $text-muted;
+  padding-left: 0.5em;
+}
+
+/* Agrega esta sección a tu archivo custom.scss para estilizar la tabla de contenido */
+table {
+  width: 100%; /* Opcional: ajusta el ancho de la tabla según tus necesidades */
+  border-collapse: collapse;
+}
+
+th, td {
+  font-size: 18px; /* Cambia el tamaño de letra según tus preferencias */
+  text-align: center; /* Alinea el texto al centro en las celdas */
+  border: 1px solid #ddd; /* Agrega bordes a las celdas para mayor claridad */
+  padding: 10px; /* Espaciado interno en las celdas */
+}
+
+/* Estilos adicionales si los necesitas */
+th {
+  background-color: "grey"; /* Color de fondo para las celdas de encabezado */
+  font-weight: bold; /* Texto en negrita en las celdas de encabezado */
+}
+
+/* Estilos específicos para las celdas que contienen rangos numéricos */
+td.range-cell {
+  background-color: #e6f7ff; /* Color de fondo para las celdas con rangos numéricos */
+  font-weight: bold; /* Texto en negrita en las celdas con rangos numéricos */
+}

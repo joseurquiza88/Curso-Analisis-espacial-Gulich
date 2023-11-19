@@ -1,0 +1,490 @@
+---
+title: "Trabajo final: Análisis espacial y Situaciones de riesgo"
+subtitle: "Grupo 5"
+date: "10/11/2023"
+format:
+  revealjs:
+    theme: [night, custom.scss]
+    includes:
+      after_body: custom.js  # Agrega tu archivo JavaScript personalizado aquí
+editor: visual
+author: 
+- Patricia Acetta 
+- Henry Millones
+- Marta Rueda
+- Javier Terrazas
+- Josefina Urquiza
+incremental: true  
+self-contained: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r, include = F}
+library(knitr)
+opts_chunk$set(echo = F, comment = NA, message = F, warning = F)
+```
+
+```{r, include = F}
+# Paquetes requeridos
+pacman::p_load(rio, tidyverse, moments, sf,spdep,tidyverse, tmap, leaflet, stars,
+               mapview, # remotes::install_github("r-spatial/mapview")
+               e1071, gridExtra, RColorBrewer, raster, cowplot, gstat)
+```
+
+## Contexto
+
+Se seleccionó el Problema 2.
+
+El set de datos brindado es el archivo `r xfun::embed_file("suelo_finca.txt", text= "suelo_finca.txt")` `r fontawesome::fa("download")` presenta la información georreferenciada de 100 sitios de muestreo realizado en una finca agrícola.
+
+Los límites del área de estudio se encuentran en el archivo `r xfun::embed_file("suelo_finca_limites.txt", text= "suelo_finca_limites.txt")` `r fontawesome::fa("download")`. La finca se encuentra en Bogotá (Colombia).
+
+Las variables relevadas fueron propiedades de suelo entre las cuales se presentan:
+
+::: columns
+::: {.column width="50%"}
+-   coordenadas (x e y),
+-   pH,
+-   conductividad eléctrica (CE),
+-   materia orgánica (MO),
+-   fósforo (P),
+:::
+
+::: {.column width="50%"}
+-   nitrógeno (N),
+-   potasio (K),
+-   capacidad de intercambio catiónico (CIC) y
+-   contenido de arcilla (Arcilla).
+:::
+:::
+
+## Justificación
+
+Se seleccionó la variable materia orgánica (MO). La materia orgánica aumenta la capacidad de adsorción de agua y la facilidad con que la misma es suministrada a las plantas, por lo que es un componente fundamental del suelo, y su presencia o ausencia puede afectar diversas propiedades y procesos del suelo.
+
+| Materia Orgánica % |                      |
+|--------------------|----------------------|
+| \<0.6              | extremadamente pobre |
+| 0.6-1.2            | pobre                |
+| 1.2-1.8            | medianamente pobre   |
+| 1.8-2.4            | medio                |
+| 2.4-3.0            | medianamente rico    |
+| 3.0-4.2            | rico                 |
+| \>4.2              | extremadamente rico  |
+|                    |                      |
+
+*Contenido de materia orgánica (%) Velasco Molina, 1983*
+
+## 
+
+### Relación de la MO con otras variables medidas
+
+-   pH del suelo: La materia orgánica puede actuar como un amortiguador del pH del suelo. Los ácidos húmicos y fúlvicos presentes en la materia orgánica pueden ayudar a mantener el pH del suelo en un rango adecuado para el crecimiento de las plantas.
+
+-   Conductividad eléctrica (CE): La cantidad y tipo de materia orgánica en el suelo pueden influir en la conductividad eléctrica. La descomposición de la materia orgánica puede liberar iones en el suelo, afectando así su conductividad eléctrica.
+
+-   Fósforo (P), nitrógeno (N) y potasio (K): La materia orgánica es una fuente importante de nutrientes para las plantas. Cuando la materia orgánica se descompone, libera nutrientes como nitrógeno, fósforo y potasio en formas que las plantas pueden absorber y utilizar para su crecimiento.
+
+-   Capacidad de intercambio catiónico (CIC): La materia orgánica tiene una alta capacidad de intercambio catiónico, lo que significa que puede retener y liberar nutrientes para las plantas. Un suelo rico en materia orgánica tendrá una mayor CIC, lo que mejora la disponibilidad de nutrientes para las plantas.
+
+-   Contenido de arcilla: La arcilla es un componente mineral del suelo y afecta la estructura del suelo. La materia orgánica puede interactuar con las partículas de arcilla para formar agregados del suelo, mejorando así la estructura del suelo y su capacidad para retener agua y nutrientes.
+
+## Objetivo
+
+Realizar un análisis de la variabilidad espacial de la materia orgánica (MO) en la finca estudiada, empleando técnicas estadísticas y espaciales.
+
+Esto implica identificar patrones de distribución y tendencias en los niveles de MO, así como evaluar la presencia de valores atípicos y su impacto en la variabilidad. A través del ajuste de semivariogramas empíricos y teóricos, se busca modelar la estructura de correlación espacial de la MO, permitiendo así realizar predicciones espaciales precisas. La validación cruzada y la comparación entre diferentes modelos ajustados se utilizan para evaluar y mejorar la calidad de las predicciones, proporcionando así una comprensión profunda de la distribución de la MO en la finca y ofreciendo orientación para prácticas agrícolas más efectivas y sostenibles.
+
+## Metodología
+
+Se realiza un análisis descriptivo de la variable de interés, en este caso, la materia orgánica (MO), a través de gráficos y medidas de resumen.
+
+Posteriormente, se realiza una representación espacial de los datos utilizando las coordenadas (x, y) en un mapa, mostrando la variación de los niveles de MO en la finca.
+
+Luego, se procede a realizar el ajuste de semivariogramas empíricos y teóricos para la variable estudiada.
+
+Se consideran diferentes modelos de correlación espacial y se selecciona el modelo de mejor ajuste utilizando criterios estadísticos recomendados.
+
+A continuación, se realiza la predicción espacial de los valores de MO y se evalúa la calidad de la predicción mediante validación cruzada.
+
+Se comparan los resultados obtenidos con al menos uno de los otros modelos ajustados, lo que permite hacer conclusiones sobre la calidad de la predicción y ofrecer sugerencias sobre los datos utilizados y posibles mejoras en el modelo.
+
+## Análisis descriptivo
+
+Vista previa de los datos analizados:
+
+```{r, comment= F, include= F}
+datos <- import("suelo_finca.txt") 
+suelo_finca <- st_as_sf(datos, coords = c("x", "y"), crs = 32618)
+# suelo_finca_limites <- import("suelo_finca_limites.txt", header = T)
+# suelo_finca_limites <- st_as_sf(suelo_finca_limites, coords = c("x", "y"), crs = 32618)
+suelo_finca_limites <-st_read("limites_finca1.gpkg")
+```
+
+```{r, results='asis'}
+# Mostrar las primeras 5 filas como una tabla HTML
+tabla_html <- kable(head(datos, 5), format = "html")
+
+# Imprimir la tabla HTML
+print(tabla_html)
+```
+
+## 
+
+### Gráficos exploratorios
+
+```{r}
+histograma <- ggplot(datos, aes(x = MO)) +
+  geom_histogram(aes(y = after_stat(count) / sum(count))) +
+  ylab("Frecuencia Relativa") +
+  theme_grey() + theme_bw()
+
+boxplot <- ggplot(datos, aes(y = MO)) +
+  geom_boxplot() +
+  ylab("Materia Orgánica (%)")  +
+  scale_x_discrete(breaks = NULL) +
+  xlab(NULL) +
+  theme_light()
+
+boxplot2 <- ggplot(datos, aes(y = MO)) +
+  geom_boxplot(coef = 3) +
+  ylab("Materia Orgánica (%)")  +
+  scale_x_discrete(breaks = NULL) +
+  xlab(NULL) +
+  theme_light()
+
+grid.arrange(histograma, boxplot, boxplot2, ncol = 3)
+```
+
+Se observa una distribución asimetrica a izquierda. Los niveles de MO observados son ligeramente bajos para lotes destinados a cultivos agrícolas/ganaderos.
+
+Los valores atípicos que se observan son moderados, no hay valores atípicos extremos (coef = 3).
+
+## 
+
+### Medidas de resumen
+
+A continuación se muestra las medidas resumen analizadas.
+
+```{r, results='asis'}
+resumen <- suelo_finca %>% 
+  summarise(Media = mean(MO),
+         DE = sd(MO),
+         LI = Media - 2.5 * DE,
+         LS = Media + 2.5 * DE,
+         min = min(MO), max = max(MO),
+         asimetria = e1071::skewness(MO))
+resumen_df <- data.frame(
+  Media = resumen$Media,
+  DE = resumen$DE,
+  LI = resumen$LI,
+  LS = resumen$LS,
+  min = resumen$min,
+  max = resumen$max,
+  asimetria = resumen$asimetria
+)
+tabla_html <- kable(resumen_df, format = "html", 
+                    col.names = c("Media", "DE", "LI", "LS", "Min", "Max", "Asimetria"))
+
+print(tabla_html)
+
+
+suelo_finca1 <- suelo_finca %>% 
+  filter(MO >= resumen$LI)
+```
+
+A partir de las medidas de resumen calculadas se filtran los datos de MO que distan a mas de 2.5 desvíos de la media.
+
+Además a través del Índice de Moran se calcularon los valores inliers y se descartaron.
+
+```{r, echo = F, comment =F, include= F}
+source("1 Indice de Moran.R")
+```
+
+```{r}
+moran.plot(
+    suelo_finca1$MO,
+    lw2,
+    col = 3,
+    quiet = T,
+    labels = F,
+    zero.policy = T,
+    xlab = "MO",
+    ylab = "MO Spatially Lagged"
+  )
+```
+
+
+## 
+
+### Mapa de valores de MO (%) muestreados
+
+```{r}
+tmap_mode('view')
+map<- mapview(suelo_finca,
+        zcol = "MO") + mapview(suelo_finca_limites)
+
+cols <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+mapview(suelo_finca,
+        zcol = "MO",
+        alpha = 0,
+        col.regions = cols)
+```
+
+Estos datos geostadísticos corresponden a un dominio continuo. En el centro de la finca se encuentran los mayores valores de MO y en los extremos norte y sobre todo sur, los menores valores de MO.
+
+## Análisis
+
+Se analizó modelos con y sin tendencia en x e y (longitud y latitud).
+
+Se ajustaron los semivariogramas empíricos y teóricos para MO.
+
+
+### Exploración de la tendencia en x e y
+
+```{r}
+suelo_finca3 <- cbind(suelo_finca3, st_coordinates(suelo_finca3)) %>%
+  rename("x" = X, "y" = Y)
+
+px <- ggplot(suelo_finca3, aes(x, MO)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE)
+
+py <- ggplot(suelo_finca3, aes(y, MO)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE)
+
+gridExtra::grid.arrange(px, py, ncol = 2)
+```
+
+## 
+
+### Ajuste de semivariograma empírico o experimental
+
+_(sin tener en cuenta tendencia)_
+
+```{r}
+semi_exp <- variogram(MO ~ 1, suelo_finca3, cutoff=180)
+
+```
+
+```{r, echo= T}
+modelo_exp_MO<-
+  fit.variogram(semi_exp, vgm(c("Exp","Sph", "Gau")))
+modelo_exp_MO
+```
+
+```{r}
+p1 <- plot(semi_exp, modelo_exp_MO)
+```
+
+### Ajuste de semivariograma teórico
+
+_(contemplando tendencia)_
+
+```{r, echo= T}
+semi_teorico_MO_t<- variogram(MO ~ x + y, suelo_finca3)
+modelo_teorico_MO_t <-
+  fit.variogram(semi_teorico_MO_t, vgm(c("Exp","Sph", "Gau")))
+modelo_teorico_MO_t
+```
+
+```{r}
+p2 <- plot(semi_teorico_MO_t, modelo_teorico_MO_t)
+```
+
+## 
+
+### Comparación de los modelos ajustados
+
+```{r}
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+
+## 
+
+$R^"$ del modelo lineal con tendencia en X e y:
+
+```{r}
+summary(lm(MO ~ x + y, suelo_finca3))$r.squared*100
+```
+
+Suma de cuadrados del Error del modelo sin tendencia:
+
+```{r}
+attr(modelo_exp_MO, 'SSErr') 
+```
+
+Suma de cuadrados del Error del modelo con tendencia:
+
+```{r}
+attr(modelo_teorico_MO_t, 'SSErr') 
+```
+
+## Predicción espacial y su incertidumbre
+
+La predicción se realizó utilizando **Kriging Universal** `(MO~ X + Y)`.
+
+La grilla de predicción utilizada fue de 5x5.
+
+El numero máximo de vecinos considerados fue de 25.
+
+## 
+
+```{r}
+tmap_mode('view')
+
+# Generacion de grilla de prediccion ####
+grilla <- st_bbox(suelo_finca_limites) %>%
+  st_as_stars(dx = 5) %>%   # tamaño de la celda, a mas datos puede ser mas chica
+  st_crop(suelo_finca_limites)
+
+#  Kriging universal ####
+interp_MO <-
+  krige(MO ~ x + y ,
+        suelo_finca3,
+        grilla,
+        model = modelo_teorico_MO_t,
+        nmax = 25)
+
+interp_MO$DE_pred <- sqrt(interp_MO$var1.var)
+
+interp_MO_DE <- interp_MO
+
+mapa_prediccion <-
+  tm_basemap(
+    c(
+      Satelite = "Esri.WorldImagery",
+      Politico = "Esri.WorldGrayCanvas",
+      Topo = "Esri.WorldTopoMap"
+    )
+  ) +
+  tm_shape(interp_MO) +
+  tm_raster(
+    col = "var1.pred",
+    title = "MO Predicción (%)",
+    style = "fixed",
+    palette = "-Spectral",
+    contrast = c(0, 1),
+    breaks = seq(0,3, 0.5),
+  ) +
+  tm_layout(legend.format = list(
+    scientific = TRUE,
+    format = "f",
+    digits = 1
+  ))
+
+
+mapa_DE <-
+  tm_basemap(
+    c(
+      Satelite = "Esri.WorldImagery",
+      Politico = "Esri.WorldGrayCanvas",
+      Topo = "Esri.WorldTopoMap"
+    )
+  ) +
+  tm_shape(interp_MO_DE) +
+  tm_raster(
+    col = "DE_pred",
+    title = "DE de Predicción",
+    style = "quantile",
+    palette = "-Spectral",
+    n = 5
+  ) +
+  tm_layout(legend.format = list(
+    scientific = TRUE,
+    format = "f",
+    digits = 3
+  ))
+
+
+mapa_muestra <- tm_shape(suelo_finca3) +
+  tm_dots(
+    "MO",
+    title = "MO Observados (%)",
+    style = "fixed",
+    palette = "-Spectral",
+    breaks = seq(0,3, 0.5),
+    alpha = 0.7,
+    size = 0.1,
+    popup.vars = T,
+    popup.format = list(
+      digits = 2,
+      decimal.mark = ",",
+      big.mark = "."
+    )
+  ) +
+  tm_layout(legend.format = list(scientific = TRUE, format = "f"))
+
+mapas_todos <- mapa_DE + mapa_prediccion + mapa_muestra
+mapas_todos
+```
+
+## Evaluación de la calidad de la predicción
+
+Se evaluó la calidad de la predicción del modelo seleccionado mediante validación cruzada.
+
+`k fold` = 10
+
+```{r}
+tmap_mode('view')
+set.seed(7)
+validacion_tendencia <-
+  krige.cv(MO ~ x + y ,
+           suelo_finca3,
+           modelo_teorico_MO_t,
+           nfold = 10)
+mapview(validacion_tendencia["residual"])
+```
+
+## 
+
+### Métricas obtenidas de validación cruzada
+
+```{r, echo= F, results='asis'}
+metricas<- validacion_tendencia %>% 
+  summarise(ME = mean(residual),
+            MAE =  mean(abs(residual)),
+            MAPE = mean(abs(residual) / observed ) *100,
+            MSE  =  mean(residual^ 2),
+            MSNE= mean(zscore ^ 2),
+            RMSE  =  sqrt(mean(residual ^ 2)),
+            RMSE_cv  = sqrt(MSE) / mean(observed) * 100)
+
+# Convertir metricas en un marco de datos
+metricas_df <- data.frame(
+  ME = metricas$ME,
+  MAE = metricas$MAE,
+  MAPE = metricas$MAPE,
+  MSE = metricas$MSE,
+  MSNE = metricas$MSNE,
+  RMSE = metricas$RMSE,
+  RMSE_cv = metricas$RMSE_cv
+)
+
+# Convertir metricas_df en una tabla HTML para Markdown
+tabla_html_metricas <- knitr::kable(metricas_df, format = "html", 
+                                   col.names = c("ME", "MAE", "MAPE", "MSE", "MSNE", "RMSE", "RMSE_cv"))
+
+# Imprimir la tabla HTML de métricas
+print(tabla_html_metricas)
+```
+
+## Conclusión
+
+-   En la exploración de los datos se encontraron ouliers e inliers, los cuales fueron descartados.
+
+-   Hay autocorrelación espacial hasta 44.8 mts.
+
+-   En los gráficos se observa no estacionariedad, en x e y, y en el ajuste del modelo lineal, el $R^2$ es bajo.
+
+-   En los semivariogramas se observa mejor ajuste en el modelo con tendencia, además de tener una Suma de cuadrados del error baja. El mejor modelo que se ajusto es el `Gaussiano`.
+
+-   La predicción se realizó con Kriging Universal, dado que se tuvo en cuenta la tendencia ajustada y que la media de la MO es desconocida. Las métricas de validación cruzada de este modelo, indican que es un buen ajuste modelo, `RMSE` = `r round(metricas$RMSE,4)` y `RMSE_cv` = `r round(metricas$RMSE_cv,2)`%.
+
+-   No se ajustaron modelos teniendo en cuenta covariables, como por ejemplo `Regresion Kriging`, `Métodos Bayesianos`, etc, por falta de tiempo, pero se considera importante poder explorar otro tipo de ajustes.
+
+## 
+
+<center>¡Muchas Gracias!</center>

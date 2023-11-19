@@ -1,0 +1,500 @@
+#data_1.5 <- read.csv("D:/Josefina/Proyectos/aeronet/datos/ceilap.csv",header=TRUE, skip=6,sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+data_1.5 <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/BA-2015-2022-L15.csv",header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_1.5$date <- paste(data_1.5$Date.dd.mm.yyyy., data_1.5$Time.hh.mm.ss., sep=" ")
+data_1.5$date <-strptime(data_1.5$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_1.5$date <- as.POSIXct(data_1.5$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_1.5$year<- substr(data_1.5$Date.dd.mm.yyyy.,7,10)
+data_1.5$mes<- substr(data_1.5$Date.dd.mm.yyyy.,4,5)
+data_1.5$year_mes <- paste(data_1.5$year,data_1.5$mes,sep="")
+
+
+data_1.5_c <- data_frame(date = data_1.5$date,
+                         year = data_1.5$year,
+                         year_mes = data_1.5$year_mes,
+                         aod_380 = data_1.5$AOD_380nm,
+                         aod_440 = data_1.5$AOD_440nm,
+                         aod_500 = data_1.5$AOD_500nm,
+                         aod_670 = data_1.5$AOD_675nm,
+                         aod_870 = data_1.5$AOD_870nm,
+                         aod_1020 = data_1.5$AOD_1020nm)
+data_2 <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/BA-2015-2022-L20.csv",header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_2$date <- paste(data_2$Date.dd.mm.yyyy., data_2$Time.hh.mm.ss., sep=" ")
+data_2$date <-strptime(data_2$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_2$date <- as.POSIXct(data_2$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_2$year<- substr(data_2$Date.dd.mm.yyyy.,7,10)
+data_2$mes<- substr(data_2$Date.dd.mm.yyyy.,4,5)
+data_2$year_mes <- paste(data_2$year,data_2$mes,sep="")
+
+
+data_2_c <- data_frame(date = data_2$date,
+                         year = data_2$year,
+                         year_mes = data_2$year_mes,
+                         aod_380 = data_2$AOD_380nm,
+                         aod_440 = data_2$AOD_440nm,
+                         aod_500 = data_2$AOD_500nm,
+                         aod_670 = data_2$AOD_675nm,
+                         aod_870 = data_2$AOD_870nm,
+                         aod_1020 = data_2$AOD_1020nm)
+
+
+arg_2.0<- timePlot(data_2_c, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), statistic = "mean", avg.time ="week",
+                   lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                   ylab = "AOD Aeronet", main = "Buenos Aires L2.0", group = TRUE,)
+
+arg_1.5<- timePlot(data_1.5_c, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), statistic = "mean", avg.time ="week",
+                   lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                   ylab = "AOD Aeronet", main = "Buenos Aires L1.5", group = TRUE,)
+
+
+
+png("aeronet_BA.png",width=1000,height=600) 
+print(arg_1.5, split = c(1, 1, 2, 2))  
+print(arg_2.0, split = c(2, 1, 2, 2), newpage = FALSE) 
+dev.off()
+# MERGE PRUEBAS
+
+
+BA_1 <- merge(x = data_1.5_c, y = data_2_c, all.x = TRUE, by = "date")
+
+BA_1$true_380 <- BA_1$aod_380.x == BA_1$aod_380.y
+BA_1$true_440 <- BA_1$aod_440.x == BA_1$aod_440.y
+BA_1$true_500 <- BA_1$aod_500.x == BA_1$aod_500.y
+BA_1$true_670 <- BA_1$aod_670.x == BA_1$aod_670.y
+BA_1$true_870 <- BA_1$aod_870.x == BA_1$aod_870.y
+BA_1$true_1020 <- BA_1$aod_1020.x == BA_1$aod_1020.y
+
+write.csv(BA_1,"D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/merge_BA.csv")
+
+
+##### media diaria
+BA_1$fecha <- as.POSIXct(strptime(substr(BA_1$date,1,10),format="%Y-%m-%d", tz="GMT"))
+
+BA_1 %>%
+  group_by(fecha) %>%  
+  group_split() -> data_group_ba
+df_rbind <- data.frame()
+for (p in 1:length(data_group_ba)){ 
+  df <- data.frame(date = data_group_ba[[p]][["fecha"]][1],
+                   aod_380.x = mean(data_group_ba[[p]][["aod_380.x"]],na.rm=T),
+                   aod_380.y = mean(data_group_ba[[p]][["aod_380.y"]],na.rm=T),
+                   aod_440.x = mean(data_group_ba[[p]][["aod_440.x"]],na.rm=T),
+                   aod_440.y = mean(data_group_ba[[p]][["aod_440.y"]],na.rm=T),
+                   aod_500.x = mean(data_group_ba[[p]][["aod_500.x"]],na.rm=T),
+                   aod_500.y = mean(data_group_ba[[p]][["aod_500.y"]],na.rm=T),
+                   aod_670.x = mean(data_group_ba[[p]][["aod_670.x"]],na.rm=T),
+                   aod_670.y = mean(data_group_ba[[p]][["aod_670.y"]],na.rm=T),
+                   aod_870.x = mean(data_group_ba[[p]][["aod_870.x"]],na.rm=T),
+                   aod_870.y = mean(data_group_ba[[p]][["aod_870.y"]],na.rm=T),
+                   aod_1020.x = mean(data_group_ba[[p]][["aod_1020.x"]],na.rm=T),
+                   aod_1020.y = mean(data_group_ba[[p]][["aod_1020.y"]],na.rm=T))
+                   
+  
+  
+  df_rbind <- rbind(df_rbind ,df) 
+}
+
+
+date <- as.data.frame(seq.Date(as.Date(ISOdate(2015,01,01)), as.Date(ISOdate(2022,12,31)), by = "day", tz = "GMT")) 
+names(date) <- "date"
+date$num <- 1
+date$date <- as.POSIXct(strptime(date$date ,format="%Y-%m-%d", tz="GMT"))
+dataset_comp_BA <- merge(date,df_rbind, all.x = TRUE, by = "date")
+
+ggplot(dataset_comp_BA) +  geom_line(mapping = aes(x=date, y=aod_1020.x,color="L1.5"),show.legend = TRUE)+
+  geom_line(mapping = aes(x=date, y=aod_1020.y,color="L2.0"),show.legend = TRUE)+theme_bw()+
+  ylab("AOD 1020")
+  
+
+ggplot(dataset_comp_BA) +  
+  geom_line(mapping = aes(x=date, y=aod_380.y,color="L2.0"),show.legend = TRUE)+theme_bw()+
+  geom_line(mapping = aes(x=date, y=aod_380.x,color="L1.5"),show.legend = TRUE)+
+  ylab("AOD 380")
+
+
+
+data_1.5_aod_380  <-  length(data_1.5_c[complete.cases(data_1.5_c$aod_380), ][[5]])
+data_1.5_aod_440  <-  length(data_1.5_c[complete.cases(data_1.5_c$aod_440), ][[5]])
+data_1.5_aod_500  <-  length(data_1.5_c[complete.cases(data_1.5_c$aod_500), ][[5]])
+data_1.5_aod_670  <-  length(data_1.5_c[complete.cases(data_1.5_c$aod_670), ][[5]])
+data_1.5_aod_870  <-  length(data_1.5_c[complete.cases(data_1.5_c$aod_870), ][[5]])
+data_1.5_aod_1020  <-  length(data_1.5_c[complete.cases(data_1.5_c$aod_1020),][[5]])
+
+
+
+
+
+###################################################################################
+#SP
+#data_1.5 <- read.csv("D:/Josefina/Proyectos/aeronet/datos/ceilap.csv",header=TRUE, skip=6,sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+data_1.5_sp <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/SP-2015-2022-L15.csv", header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_1.5_sp$date <- paste(data_1.5_sp$Date.dd.mm.yyyy., data_1.5_sp$Time.hh.mm.ss., sep=" ")
+data_1.5_sp$date <-strptime(data_1.5_sp$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_1.5_sp$date <- as.POSIXct(data_1.5_sp$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_1.5_sp$year<- substr(data_1.5_sp$Date.dd.mm.yyyy.,7,10)
+data_1.5_sp$mes<- substr(data_1.5_sp$Date.dd.mm.yyyy.,4,5)
+data_1.5_sp$year_mes <- paste(data_1.5_sp$year,data_1.5_sp$mes,sep="")
+
+
+data_1.5_c_sp <- data_frame(date = data_1.5_sp$date,
+                         year = data_1.5_sp$year,
+                         year_mes = data_1.5_sp$year_mes,
+                         aod_380 = data_1.5_sp$AOD_380nm,
+                         aod_440 = data_1.5_sp$AOD_440nm,
+                         aod_500 = data_1.5_sp$AOD_500nm,
+                         aod_670 = data_1.5_sp$AOD_675nm,
+                         aod_870 = data_1.5_sp$AOD_870nm,
+                         aod_1020 = data_1.5_sp$AOD_1020nm)
+data_2_sp <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/SP-2015-2022-L20.csv",skip=6,header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_2_sp$date <- paste(data_2_sp$Date.dd.mm.yyyy., data_2_sp$Time.hh.mm.ss., sep=" ")
+data_2_sp$date <-strptime(data_2_sp$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_2_sp$date <- as.POSIXct(data_2_sp$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_2_sp$year<- substr(data_2_sp$Date.dd.mm.yyyy.,7,10)
+data_2_sp$mes<- substr(data_2_sp$Date.dd.mm.yyyy.,4,5)
+data_2_sp$year_mes <- paste(data_2_sp$year,data_2_sp$mes,sep="")
+
+
+data_2_c_sp <- data_frame(date = data_2_sp$date,
+                       year = data_2_sp$year,
+                       year_mes = data_2_sp$year_mes,
+                       aod_380 = data_2_sp$AOD_380nm,
+                       aod_440 = data_2_sp$AOD_440nm,
+                       aod_500 = data_2_sp$AOD_500nm,
+                       aod_670 = data_2_sp$AOD_675nm,
+                       aod_870 = data_2_sp$AOD_870nm,
+                       aod_1020 = data_2_sp$AOD_1020nm)
+
+
+plot_2.0_sp <- timePlot(data_2_c_sp, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), statistic = "mean", avg.time ="day",
+                   lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                   ylab = "AOD Aeronet", main = "SP L2.0", group = TRUE,)
+
+plot_1.5_sp<- timePlot(data_1.5_c_sp, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), statistic = "mean", avg.time ="hour",
+                   lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                   ylab = "AOD Aeronet", main = "SP L1.5", group = TRUE,)
+
+
+
+png("aeronet_SP.png",width=1000,height=600) 
+print(plot_2.0_sp, split = c(1, 1, 2, 2))  
+print(plot_1.5_sp, split = c(2, 1, 2, 2), newpage = FALSE) 
+dev.off()
+
+SP_2 <- merge(x = data_1.5_c_sp, y = data_2_c_sp,  by = "date")
+
+plot_1.5_sp_380<- timePlot(SP_2, pollutant = c("aod_380.x","aod_380.y"), statistic = "mean", avg.time ="day",
+                       lty=1, key=FALSE, name.pol =  c("aod_380.x","aod_380.y"),key.columns = 3,
+                       ylab = "AOD Aeronet", main = "SP AOD 380", group = TRUE)
+
+plot_1.5_sp_440<- timePlot(SP_2, pollutant = c("aod_440.x","aod_440.y"), statistic = "mean", avg.time ="day",
+                           lty=1, key=FALSE, name.pol =  c("aod_440.x","aod_440.y"),key.columns = 3,
+                           ylab = "AOD Aeronet", main = "SP AOD 440", group = TRUE)
+
+plot_1.5_sp_440<- timePlot(SP_2, pollutant = c("aod_440.x","aod_440.y"), statistic = "mean", avg.time ="hour",
+                           lty=1, key=FALSE, name.pol =  c("aod_440.x","aod_440.y"),key.columns = 3,
+                           ylab = "AOD Aeronet", main = "SP AOD 440", group = TRUE)
+plot_1.5_sp_670<- timePlot(SP_2, pollutant = c("aod_670.x","aod_670.y"), statistic = "mean", avg.time ="hour",
+                           lty=1, key=FALSE, name.pol =  c("aod_670.x","aod_670.y"),key.columns = 3,
+                           ylab = "AOD Aeronet", main = "SP AOD 670", group = TRUE)
+plot_1.5_sp_870<- timePlot(SP_2, pollutant = c("aod_870.x","aod_870.y"), statistic = "mean", avg.time ="hour",
+                           lty=1, key=FALSE, name.pol =  c("aod_870.x","aod_870.y"),key.columns = 3,
+                           ylab = "AOD Aeronet", main = "SP AOD 870", group = TRUE)
+plot_1.5_sp_1020<- timePlot(SP_2, pollutant = c("aod_1020.x","aod_1020.y"), statistic = "mean", avg.time ="hour",
+                           lty=1, key=FALSE, name.pol =  c("aod_1020.x","aod_1020.y"),key.columns = 3,
+                           ylab = "AOD Aeronet", main = "SP AOD 1020", group = TRUE)
+
+
+SP_1 <- merge(x = data_1.5_c_sp, y = data_1_c_sp, all.x = TRUE, by = "date")
+
+SP_1$true_380 <- SP_1$aod_380.x == SP_1$aod_380.y
+SP_1$true_440 <- SP_1$aod_440.x == SP_1$aod_440.y
+SP_1$true_500 <- SP_1$aod_500.x == SP_1$aod_500.y
+SP_1$true_670 <- SP_1$aod_670.x == SP_1$aod_670.y
+SP_1$true_870 <- SP_1$aod_870.x == SP_1$aod_870.y
+SP_1$true_1020 <- SP_1$aod_1020.x == SP_1$aod_1020.y
+
+write.csv(SP_1,"D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/merge_SP.csv")
+###################################################################################
+# ST
+#data_1.5 <- read.csv("D:/Josefina/Proyectos/aeronet/datos/ceilap.csv",header=TRUE, skip=6,sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+data_1.5_ST <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/ST-2015-2022-L15.csv", skip=6,header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_1.5_ST$date <- paste(data_1.5_ST$Date.dd.mm.yyyy., data_1.5_ST$Time.hh.mm.ss., sep=" ")
+data_1.5_ST$date <-strptime(data_1.5_ST$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_1.5_ST$date <- as.POSIXct(data_1.5_ST$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_1.5_ST$year<- substr(data_1.5_ST$Date.dd.mm.yyyy.,7,10)
+data_1.5_ST$mes<- substr(data_1.5_ST$Date.dd.mm.yyyy.,4,5)
+data_1.5_ST$year_mes <- paste(data_1.5_ST$year,data_1.5_ST$mes,sep="")
+
+
+data_1.5_c_ST <- data_frame(date = data_1.5_ST$date,
+                            year = data_1.5_ST$year,
+                            year_mes = data_1.5_ST$year_mes,
+                            aod_380 = data_1.5_ST$AOD_380nm,
+                            aod_440 = data_1.5_ST$AOD_440nm,
+                            aod_500 = data_1.5_ST$AOD_500nm,
+                            aod_670 = data_1.5_ST$AOD_675nm,
+                            aod_870 = data_1.5_ST$AOD_870nm,
+                            aod_1020 = data_1.5_ST$AOD_1020nm)
+data_2_ST <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/ST-2015-2022-L20.csv",header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_2_ST$date <- paste(data_2_ST$Date.dd.mm.yyyy., data_2_ST$Time.hh.mm.ss., sep=" ")
+data_2_ST$date <-strptime(data_2_ST$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_2_ST$date <- as.POSIXct(data_2_ST$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_2_ST$year<- substr(data_2_ST$Date.dd.mm.yyyy.,7,10)
+data_2_ST$mes<- substr(data_2_ST$Date.dd.mm.yyyy.,4,5)
+data_2_ST$year_mes <- paste(data_2_ST$year,data_2_ST$mes,sep="")
+
+
+data_2_c_ST <- data_frame(date = data_2_ST$date,
+                          year = data_2_ST$year,
+                          year_mes = data_2_ST$year_mes,
+                          aod_380 = data_2_ST$AOD_380nm,
+                          aod_440 = data_2_ST$AOD_440nm,
+                          aod_500 = data_2_ST$AOD_500nm,
+                          aod_670 = data_2_ST$AOD_675nm,
+                          aod_870 = data_2_ST$AOD_870nm,
+                          aod_1020 = data_2_ST$AOD_1020nm)
+
+
+plot_2.0_ST <- timePlot(data_2_c_ST, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), statistic = "mean", avg.time ="day",
+                        lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                        ylab = "AOD Aeronet", main = "ST L2.0", group = TRUE,)
+
+plot_1.5_ST<- timePlot(data_1.5_c_ST, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), statistic = "mean", avg.time ="day",
+                       lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                       ylab = "AOD Aeronet", main = "ST L1.5", group = TRUE,)
+
+
+
+png("aeronet_ST.png",width=1000,height=600) 
+print(plot_2.0_ST, split = c(1, 1, 2, 2))  
+print(plot_1.5_ST, split = c(2, 1, 2, 2), newpage = FALSE) 
+dev.off()
+
+
+
+ST_1 <- merge(x = data_1.5_c_ST, y = data_2_c_ST, all.x = TRUE, by = "date")
+
+ST_1$true_380 <- ST_1$aod_380.x == ST_1$aod_380.y
+ST_1$true_440 <- ST_1$aod_440.x == ST_1$aod_440.y
+ST_1$true_500 <- ST_1$aod_500.x == ST_1$aod_500.y
+ST_1$true_670 <- ST_1$aod_670.x == ST_1$aod_670.y
+ST_1$true_870 <- ST_1$aod_870.x == ST_1$aod_870.y
+ST_1$true_1020 <- ST_1$aod_1020.x == ST_1$aod_1020.y
+
+write.csv(ST_1,"D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/merge/merge_ST.csv")
+
+###################################################################################
+# MD
+#data_1.5 <- read.csv("D:/Josefina/Proyectos/aeronet/datos/ceilap.csv",header=TRUE, skip=6,sep=",", dec=".", na.MDrings = "-999", MDringsAsFactors = FALSE )
+data_1.5_MD <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/MD-2015-2022-L15.csv", header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_1.5_MD$date <- paste(data_1.5_MD$Date.dd.mm.yyyy., data_1.5_MD$Time.hh.mm.ss., sep=" ")
+data_1.5_MD$date <-strptime(data_1.5_MD$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_1.5_MD$date <- as.POSIXct(data_1.5_MD$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_1.5_MD$year<- substr(data_1.5_MD$Date.dd.mm.yyyy.,7,10)
+data_1.5_MD$mes<- substr(data_1.5_MD$Date.dd.mm.yyyy.,4,5)
+data_1.5_MD$year_mes <- paste(data_1.5_MD$year,data_1.5_MD$mes,sep="")
+
+
+data_1.5_c_MD <- data_frame(date = data_1.5_MD$date,
+                            year = data_1.5_MD$year,
+                            year_mes = data_1.5_MD$year_mes,
+                            aod_380 = data_1.5_MD$AOD_380nm,
+                            aod_440 = data_1.5_MD$AOD_440nm,
+                            aod_500 = data_1.5_MD$AOD_500nm,
+                            aod_670 = data_1.5_MD$AOD_675nm,
+                            aod_870 = data_1.5_MD$AOD_870nm,
+                            aod_1020 = data_1.5_MD$AOD_1020nm)
+data_2_MD <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/MD-2015-2022-L20.csv",header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_2_MD$date <- paste(data_2_MD$Date.dd.mm.yyyy., data_2_MD$Time.hh.mm.ss., sep=" ")
+data_2_MD$date <- strptime(data_2_MD$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_2_MD$date <- as.POSIXct(data_2_MD$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_2_MD$year<- substr(data_2_MD$Date.dd.mm.yyyy.,7,10)
+data_2_MD$mes<- substr(data_2_MD$Date.dd.mm.yyyy.,4,5)
+data_2_MD$year_mes <- paste(data_2_MD$year,data_2_MD$mes,sep="")
+
+
+data_2_c_MD <- data_frame(date = data_2_MD$date,
+                          year = data_2_MD$year,
+                          year_mes = data_2_MD$year_mes,
+                          aod_380 = data_2_MD$AOD_380nm,
+                          aod_440 = data_2_MD$AOD_440nm,
+                          aod_500 = data_2_MD$AOD_500nm,
+                          aod_670 = data_2_MD$AOD_675nm,
+                          aod_870 = data_2_MD$AOD_870nm,
+                          aod_1020 = data_2_MD$AOD_1020nm)
+
+
+plot_2.0_MD <- timePlot(data_2_c_MD, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), MDatiMDic = "mean", avg.time ="day",
+                        lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                        ylab = "AOD Aeronet", main = "MD L2.0", group = TRUE,)
+
+plot_1.5_MD<- timePlot(data_1.5_c_MD, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), MDatiMDic = "mean", avg.time ="day",
+                       lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                       ylab = "AOD Aeronet", main = "MD L1.5", group = TRUE,)
+
+
+
+png("aeronet_MD.png",width=1000,height=600) 
+print(plot_2.0_MD, split = c(1, 1, 2, 2))  
+print(plot_1.5_MD, split = c(2, 1, 2, 2), newpage = FALSE) 
+dev.off()
+
+MD_1 <- merge(x = data_1.5_c_MD, y = data_2_c_MD, all.x = TRUE, by = "date")
+
+MD_1$true_380 <- MD_1$aod_380.x == MD_1$aod_380.y
+MD_1$true_440 <- MD_1$aod_440.x == MD_1$aod_440.y
+MD_1$true_500 <- MD_1$aod_500.x == MD_1$aod_500.y
+MD_1$true_670 <- MD_1$aod_670.x == MD_1$aod_670.y
+MD_1$true_870 <- MD_1$aod_870.x == MD_1$aod_870.y
+MD_1$true_1020 <- MD_1$aod_1020.x == MD_1$aod_1020.y
+
+write.csv(MD_1,"D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/merge/merge_MD.csv")
+
+
+###################################################################################
+# LP
+#data_1.5 <- read.csv("D:/Josefina/Proyectos/aeronet/datos/ceilap.csv",header=TRUE, skip=6,sep=",", dec=".", na.LPrings = "-999", LPringsAsFactors = FALSE )
+data_1.5_LP <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/LP-2015-2022-L15.csv", header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_1.5_LP$date <- paste(data_1.5_LP$Date.dd.mm.yyyy., data_1.5_LP$Time.hh.mm.ss., sep=" ")
+data_1.5_LP$date <-strptime(data_1.5_LP$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_1.5_LP$date <- as.POSIXct(data_1.5_LP$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_1.5_LP$year<- substr(data_1.5_LP$Date.dd.mm.yyyy.,7,10)
+data_1.5_LP$mes<- substr(data_1.5_LP$Date.dd.mm.yyyy.,4,5)
+data_1.5_LP$year_mes <- paste(data_1.5_LP$year,data_1.5_LP$mes,sep="")
+
+
+data_1.5_c_LP <- data_frame(date = data_1.5_LP$date,
+                            year = data_1.5_LP$year,
+                            year_mes = data_1.5_LP$year_mes,
+                            aod_380 = data_1.5_LP$AOD_380nm,
+                            aod_440 = data_1.5_LP$AOD_440nm,
+                            aod_500 = data_1.5_LP$AOD_500nm,
+                            aod_670 = data_1.5_LP$AOD_675nm,
+                            aod_870 = data_1.5_LP$AOD_870nm,
+                            aod_1020 = data_1.5_LP$AOD_1020nm)
+data_2_LP <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/LP-2015-2022-L20.csv",header=TRUE, skip=6,sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_2_LP$date <- paste(data_2_LP$Date.dd.mm.yyyy., data_2_LP$Time.hh.mm.ss., sep=" ")
+data_2_LP$date <- strptime(data_2_LP$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_2_LP$date <- as.POSIXct(data_2_LP$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_2_LP$year<- substr(data_2_LP$Date.dd.mm.yyyy.,7,10)
+data_2_LP$mes<- substr(data_2_LP$Date.dd.mm.yyyy.,4,5)
+data_2_LP$year_mes <- paste(data_2_LP$year,data_2_LP$mes,sep="")
+
+
+data_2_c_LP <- data_frame(date = data_2_LP$date,
+                          year = data_2_LP$year,
+                          year_mes = data_2_LP$year_mes,
+                          aod_380 = data_2_LP$AOD_380nm,
+                          aod_440 = data_2_LP$AOD_440nm,
+                          aod_500 = data_2_LP$AOD_500nm,
+                          aod_670 = data_2_LP$AOD_675nm,
+                          aod_870 = data_2_LP$AOD_870nm,
+                          aod_1020 = data_2_LP$AOD_1020nm)
+
+
+plot_2.0_LP <- timePlot(data_2_c_LP, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), LPatiLPic = "mean", avg.time ="day",
+                        lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                        ylab = "AOD Aeronet", main = "LP L2.0", group = TRUE,)
+
+plot_1.5_LP<- timePlot(data_1.5_c_LP, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), LPatiLPic = "mean", avg.time ="day",
+                       lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                       ylab = "AOD Aeronet", main = "LP L1.5", group = TRUE,)
+
+
+
+png("aeronet_LP.png",width=1000,height=600) 
+print(plot_2.0_LP, split = c(1, 1, 2, 2))  
+print(plot_1.5_LP, split = c(2, 1, 2, 2), newpage = FALSE) 
+dev.off()
+
+
+LP_1 <- merge(x = data_1.5_c_LP, y = data_2_c_LP, all.x = TRUE, by = "date")
+
+LP_1$true_380 <- LP_1$aod_380.x == LP_1$aod_380.y
+LP_1$true_440 <- LP_1$aod_440.x == LP_1$aod_440.y
+LP_1$true_500 <- LP_1$aod_500.x == LP_1$aod_500.y
+LP_1$true_670 <- LP_1$aod_670.x == LP_1$aod_670.y
+LP_1$true_870 <- LP_1$aod_870.x == LP_1$aod_870.y
+LP_1$true_1020 <- LP_1$aod_1020.x == LP_1$aod_1020.y
+
+write.csv(LP_1,"D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/merge/merge_LP.csv")
+
+
+###################################################################################
+# MX
+#data_1.5 <- read.csv("D:/Josefina/Proyectos/aeronet/datos/ceilap.csv",header=TRUE, skip=6,sep=",", dec=".", na.MXrings = "-999", MXringsAsFactors = FALSE )
+data_1.5_MX <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/MX-2015-2022-L15.csv", header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_1.5_MX$date <- paste(data_1.5_MX$Date.dd.mm.yyyy., data_1.5_MX$Time.hh.mm.ss., sep=" ")
+data_1.5_MX$date <-strptime(data_1.5_MX$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_1.5_MX$date <- as.POSIXct(data_1.5_MX$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_1.5_MX$year<- substr(data_1.5_MX$Date.dd.mm.yyyy.,7,10)
+data_1.5_MX$mes<- substr(data_1.5_MX$Date.dd.mm.yyyy.,4,5)
+data_1.5_MX$year_mes <- paste(data_1.5_MX$year,data_1.5_MX$mes,sep="")
+
+
+data_1.5_c_MX <- data_frame(date = data_1.5_MX$date,
+                            year = data_1.5_MX$year,
+                            year_mes = data_1.5_MX$year_mes,
+                            aod_380 = data_1.5_MX$AOD_380nm,
+                            aod_440 = data_1.5_MX$AOD_440nm,
+                            aod_500 = data_1.5_MX$AOD_500nm,
+                            aod_670 = data_1.5_MX$AOD_675nm,
+                            aod_870 = data_1.5_MX$AOD_870nm,
+                            aod_1020 = data_1.5_MX$AOD_1020nm)
+data_2_MX <- read.csv("D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/MX-2015-2022-L20.csv",header=TRUE, sep=",", dec=".", na.strings = "-999", stringsAsFactors = FALSE )
+
+data_2_MX$date <- paste(data_2_MX$Date.dd.mm.yyyy., data_2_MX$Time.hh.mm.ss., sep=" ")
+data_2_MX$date <- strptime(data_2_MX$date, format="%d:%m:%Y %H:%M:%S", tz="GMT")
+data_2_MX$date <- as.POSIXct(data_2_MX$date, format="%Y-%m-%d %H:%M:%S", tz="GMT")
+data_2_MX$year<- substr(data_2_MX$Date.dd.mm.yyyy.,7,10)
+data_2_MX$mes<- substr(data_2_MX$Date.dd.mm.yyyy.,4,5)
+data_2_MX$year_mes <- paste(data_2_MX$year,data_2_MX$mes,sep="")
+
+
+data_2_c_MX <- data_frame(date = data_2_MX$date,
+                          year = data_2_MX$year,
+                          year_mes = data_2_MX$year_mes,
+                          aod_380 = data_2_MX$AOD_380nm,
+                          aod_440 = data_2_MX$AOD_440nm,
+                          aod_500 = data_2_MX$AOD_500nm,
+                          aod_670 = data_2_MX$AOD_675nm,
+                          aod_870 = data_2_MX$AOD_870nm,
+                          aod_1020 = data_2_MX$AOD_1020nm)
+
+
+plot_2.0_MX <- timePlot(data_2_c_MX, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), MXatiMXic = "mean", avg.time ="day",
+                        lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                        ylab = "AOD Aeronet", main = "MX L2.0", group = TRUE,)
+
+plot_1.5_MX<- timePlot(data_1.5_c_MX, pollutant = c("aod_380","aod_440","aod_500","aod_670","aod_870","aod_1020"), MXatiMXic = "mean", avg.time ="day",
+                       lty=1, key=FALSE, name.pol =  c("380","440","500","670","870","1020"),key.columns = 3,
+                       ylab = "AOD Aeronet", main = "MX L1.5", group = TRUE,)
+
+
+
+png("aeronet_MX.png",width=1000,height=600) 
+print(plot_2.0_MX, split = c(1, 1, 2, 2))  
+print(plot_1.5_MX, split = c(2, 1, 2, 2), newpage = FALSE) 
+dev.off()
+
+MX_1 <- merge(x = data_1.5_c_MX, y = data_2_c_MX, all.x = TRUE, by = "date")
+
+MX_1$true_380 <- MX_1$aod_380.x == MX_1$aod_380.y
+MX_1$true_440 <- MX_1$aod_440.x == MX_1$aod_440.y
+MX_1$true_500 <- MX_1$aod_500.x == MX_1$aod_500.y
+MX_1$true_670 <- MX_1$aod_670.x == MX_1$aod_670.y
+MX_1$true_870 <- MX_1$aod_870.x == MX_1$aod_870.y
+MX_1$true_1020 <- MX_1$aod_1020.x == MX_1$aod_1020.y
+
+write.csv(MX_1,"D:/Josefina/Proyectos/aeronet/comparacion_versiones_aeronet/dataset/merge/merge_MX.csv")
+

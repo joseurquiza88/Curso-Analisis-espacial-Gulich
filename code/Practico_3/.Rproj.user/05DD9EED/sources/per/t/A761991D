@@ -1,0 +1,26 @@
+{
+    "id": "A761991D",
+    "path": "D:/Josefina/Cursos/curso_gulich/analisis_espacial/code/Practico_3/Kriging.R",
+    "project_path": "Kriging.R",
+    "type": "r_source",
+    "hash": "3062927249",
+    "contents": "",
+    "dirty": false,
+    "created": 1699022542196.0,
+    "source_on_save": false,
+    "relative_order": 3,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "284,32",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1699043741,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1699043741697,
+    "read_only": false,
+    "read_only_alternatives": []
+}
